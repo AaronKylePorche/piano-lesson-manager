@@ -1,0 +1,1306 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="First Notes">
+<title>First Notes</title>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+<style>
+  * { box-sizing: border-box; }
+  body { margin: 0; font-family: -apple-system, system-ui, sans-serif; background: #f6f5f2; color: #222; -webkit-tap-highlight-color: transparent; }
+  header { position: sticky; top: 0; z-index: 20; background: #2f3e46; color: #fff; padding: calc(env(safe-area-inset-top) + 20px) 12px 20px; display: flex; align-items: center; gap: 10px; }
+  header .titlebar { flex: 1; display: flex; align-items: center; justify-content: center; gap: 10px; }
+  header h1 { font-size: 34px; margin: 0; text-align: center; }
+  header button { background: none; border: 1px solid #fff6; color: #fff; border-radius: 8px; padding: 6px 10px; font-size: 14px; }
+  .hidden { display: none !important; }
+  #homeBtn, #topBtn { position: fixed; z-index: 30; left: 50%; transform: translateX(-50%); bottom: calc(env(safe-area-inset-bottom) + 12px); background: #2f3e46; color: #fff; border: none; border-radius: 22px; padding: 11px 32px; font-size: 16px; box-shadow: 0 2px 8px #0004; }
+  #schedule { padding-bottom: calc(env(safe-area-inset-bottom) + 72px); overflow-x: clip; }
+
+  /* Home */
+  #home, #stats, #student, #mileage { max-width: 720px; margin: 0 auto; }
+  #mileage { padding: 16px 16px calc(env(safe-area-inset-bottom) + 72px); }
+  .weeknav { display: flex; align-items: center; justify-content: center; gap: 14px; margin-bottom: 12px; font-weight: 600; }
+  .weeknav button { border: 1px solid #ccc; background: #fff; border-radius: 8px; padding: 6px 12px; font-size: 14px; }
+  .leg { display: flex; justify-content: space-between; gap: 8px; font-size: 14px; padding: 5px 0; border-top: 1px solid #eee; }
+  .leg .mi { white-space: nowrap; color: #333; }
+  .daytotal { display: flex; justify-content: space-between; font-weight: 600; padding-top: 6px; border-top: 1px solid #ccc; margin-top: 2px; }
+  .totals { display: flex; gap: 8px; }
+  .totals .stat { flex: 1; margin: 0 0 12px; padding: 12px 8px; }
+  .totals .stat .value { font-size: 22px; }
+  #home, #stats { padding: 16px; }
+  #stats { position: fixed; inset: 0; display: grid; align-content: center; }
+  .stat { background: #fff; border-radius: 12px; padding: 16px; margin: 0 auto 12px; max-width: 400px; text-align: center; box-shadow: 0 1px 3px #0001; }
+  .stat .label { font-size: 13px; color: #666; }
+  .stat .value { font-size: 30px; font-weight: 600; margin-top: 4px; }
+  .stat-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; max-width: 400px; margin: 0 auto 12px; }
+  .stat-grid .stat { margin: 0; padding: 12px 8px; }
+  .split { display: flex; justify-content: space-around; }
+  .split .value { font-size: 20px; }
+  #sRange { font-size: 32px; }
+  #sNav button { font-size: 20px; padding: 10px 20px; }
+  .nav-btns { text-align: center; }
+  .big-btn { width: 100%; padding: 16px; font-size: 17px; border: none; border-radius: 12px; background: #2f3e46; color: #fff; margin-top: 8px; }
+  .list-title { margin: 22px 0 8px; font-size: 20px; }
+  .srow { background: #fff; border-radius: 10px; padding: 12px; margin-bottom: 8px; box-shadow: 0 1px 3px #0001; }
+  .srow .name { font-weight: 600; }
+  .srow .meta { font-size: 13px; color: #555; margin-top: 3px; }
+  .badge { display: inline-block; font-size: 11px; padding: 1px 6px; border-radius: 6px; background: #e9c46a; color: #222; margin-left: 10px; }
+
+  /* Student */
+  #student { padding: 16px 16px calc(env(safe-area-inset-bottom) + 72px); }
+  .card { background: #fff; border-radius: 12px; padding: 14px; margin-bottom: 12px; box-shadow: 0 1px 3px #0001; }
+  .card h3 { margin: 0 0 8px; font-size: 16px; }
+  .card .line { font-size: 14px; margin: 4px 0; }
+  .card .line b { color: #555; font-weight: 500; }
+  .card .btn { display: block; width: 100%; font-size: 15px; padding: 11px; margin-top: 8px; border-radius: 10px; border: none; background: #eee; }
+  .card .book { display: flex; align-items: center; justify-content: space-between; gap: 8px; background: #f1f1f1; border-radius: 8px; padding: 10px 12px; margin: 6px 0; cursor: pointer; }
+  .card .book:hover { background: #e4e4e4; }
+  .card .book .chev { font-size: 20px; color: #888; line-height: 1; }
+  .note { border-top: 1px solid #eee; padding: 8px 0; font-size: 14px; white-space: pre-wrap; }
+  .note .date { font-size: 12px; color: #777; }
+
+  /* Map */
+  #map { position: relative; }
+  #mapEl { position: relative; z-index: 0; height: calc(100dvh - 52px - env(safe-area-inset-top)); }
+  #legend { position: absolute; z-index: 1; top: 10px; right: 10px; background: #fffe; border-radius: 8px; padding: 6px 8px; font-size: 12px; box-shadow: 0 1px 4px #0003; }
+  #legend div { display: flex; align-items: center; gap: 6px; margin: 2px 0; }
+  #legend i { width: 12px; height: 12px; border-radius: 50%; display: inline-block; }
+  #mapMsg { position: absolute; z-index: 1; top: 10px; left: 50px; right: 120px; background: #fffe; border-radius: 8px; padding: 6px 8px; font-size: 12px; box-shadow: 0 1px 4px #0003; }
+  @media (min-width: 600px) {
+    .big-btn, .card .btn { display: inline-block; width: auto; padding-left: 24px; padding-right: 24px; margin-right: 8px; }
+  }
+
+  /* Schedule */
+  #banner { background: #e9c46a; padding: 10px 12px; display: flex; align-items: center; gap: 10px; font-size: 14px; position: sticky; top: 52px; z-index: 19; }
+  #banner span { flex: 1; }
+  #banner button { border: none; background: #fff; border-radius: 8px; padding: 6px 10px; }
+  #grid { display: grid; grid-template-columns: 44px repeat(7, 1fr); grid-template-rows: 36px; grid-auto-rows: 22px; position: relative; touch-action: pan-y; }
+  .dayhead { position: sticky; top: var(--dayhead-top, 52px); z-index: 3; grid-row: 1; height: 36px; font-size: 11px; text-align: center; padding-top: 3px; background: #fff; border-bottom: 1px solid #ccc; }
+  .dayhead.today { color: #c0392b; font-weight: 700; }
+  .time { font-size: 10px; color: #666; text-align: right; padding-right: 4px; border-top: 1px solid #ddd; }
+  .cell { border-top: 1px solid #ccc; border-left: 1px solid #bbb; }
+  .cell.hour { border-top-color: #888; }
+  .cell.last { border-bottom: 1px solid #888; }
+  .cell.armed { background: #ffe08a; font-weight: 700; line-height: 1; display: flex; align-items: center; justify-content: center; white-space: nowrap; overflow: hidden; }
+  .lesson { z-index: 2; margin: 1px; border-radius: 5px; background: #84a98c; color: #000; border: 1px solid #000; font-size: 10px; line-height: 1.2; padding: 2px 3px; overflow: hidden; text-align: center; display: flex; flex-direction: column; justify-content: center; align-items: center; }
+  .lname { font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%; }
+  .lesson.moved { background: #a3c4bc; }
+  .lesson.unpaid { background: #f28b82; }
+  .lesson { position: relative; }
+  .due { white-space: nowrap; }
+  .ltime { white-space: nowrap; }
+  .picking .lesson { pointer-events: none; opacity: .6; }
+
+  /* Modals */
+  .overlay { position: fixed; inset: 0; background: #0006; z-index: 50; display: flex; align-items: center; justify-content: center; padding: 0 12px; }
+  .sheet { background: #fff; width: 100%; max-width: 480px; max-height: 90vh; max-height: 90dvh; overflow-y: auto; overscroll-behavior: contain; border-radius: 14px; padding: 16px 16px calc(env(safe-area-inset-bottom) + 16px); }
+  .sheet h2 { font-size: 18px; margin: 0 0 4px; }
+  .sheet p { margin: 4px 0 12px; color: #444; white-space: pre-line; }
+  .sheet label { display: block; font-size: 13px; color: #555; margin-top: 10px; }
+  .sheet input, .sheet select, .sheet textarea { width: 100%; font-family: inherit; font-size: 16px; padding: 9px; border: 1px solid #ccc; border-radius: 8px; margin-top: 3px; background: #fff; }
+  .sheet .btn { display: block; width: 100%; font-family: inherit; font-size: 16px; padding: 13px; margin-top: 8px; border-radius: 10px; border: none; background: #eee; }
+  .sheet .btn.primary { background: #2f3e46; color: #fff; }
+  .sheet summary.btn { text-align: center; list-style: none; cursor: pointer; } .sheet summary.btn::-webkit-details-marker { display: none; }
+  .sheet .btn.danger, .card .btn.danger { background: #c0392b; color: #fff; }
+  .sheet .row { display: flex; gap: 8px; }
+  .sheet .row .btn { flex: 1; }
+  .sheet .stick-top { position: sticky; top: -16px; z-index: 1; background: #fff; margin-top: -16px; padding-top: 16px; }
+  .sheet .stick-bottom { position: sticky; z-index: 1; background: #fff; bottom: calc(-16px - env(safe-area-inset-bottom)); margin-bottom: calc(-16px - env(safe-area-inset-bottom)); padding-bottom: calc(16px + env(safe-area-inset-bottom)); }
+  .err { color: #c0392b; font-size: 14px; margin-top: 8px; }
+  html, body { overscroll-behavior-y: none; }
+  #pull { position: fixed; top: env(safe-area-inset-top); left: 50%; z-index: 40; width: 40px; height: 40px; margin-left: -20px; border-radius: 50%; background: #fff; box-shadow: 0 2px 8px #0004; display: flex; align-items: center; justify-content: center; font-size: 22px; color: #2f3e46; transform: translateY(-60px); pointer-events: none; }
+  #pull.spin span { animation: pullspin .8s linear infinite; }
+  @keyframes pullspin { to { transform: rotate(360deg); } }
+  .overlay.soft { animation: softfade .3s ease-out; } .overlay.soft .sheet { animation: softrise .3s ease-out; }
+  @keyframes softfade { from { opacity: 0; } }
+  @keyframes softrise { from { transform: translateY(40px); } }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="titlebar">
+    <button id="prevWeek" class="hidden">◀</button>
+    <h1 id="title">First Notes</h1>
+    <button id="nextWeek" class="hidden">▶</button>
+  </div>
+</header>
+
+<section id="stats" class="hidden">
+  <div class="weeknav"><span id="sRange"></span></div>
+  <div class="stat-grid">
+  <div class="stat"><div class="label">Students week</div><div class="value" id="statStudents">0</div></div>
+  <div class="stat"><div class="label">Charged week</div><div class="split"><div><div class="value" id="statMoney">$0</div><div class="label">Actual</div></div><div><div class="value" id="statMoneyF">$0</div><div class="label">Forecast</div></div></div></div>
+  <div class="stat"><div class="label">Hours booked week</div><div class="value" id="statHours">0</div></div>
+  <div class="stat"><div class="label">Charged this month so far</div><div class="split"><div><div class="value" id="statMonth">$0</div><div class="label">Actual</div></div><div><div class="value" id="statMonthF">$0</div><div class="label">Forecast</div></div></div></div>
+  </div>
+  <div class="weeknav" id="sNav"><button id="sPrev">◀</button><button id="sToday">Today</button><button id="sNext">▶</button></div>
+</section>
+
+<section id="home">
+  <div class="nav-btns">
+  <button class="big-btn" id="scheduleBtn">Schedule</button>
+  <button class="big-btn" id="mapBtn">Map</button>
+  <button class="big-btn" id="mileageBtn">Mileage</button>
+  <button class="big-btn" id="statsBtn">Stats</button>
+  </div>
+  <h3 class="list-title">Students</h3>
+  <div id="studentList"></div>
+  <button id="topBtn" class="hidden">Top</button>
+</section>
+
+<section id="student" class="hidden"></section>
+
+<section id="mileage" class="hidden"></section>
+
+<section id="map" class="hidden">
+  <div id="mapEl"></div>
+  <div id="legend"></div>
+  <div id="mapMsg" class="hidden"></div>
+</section>
+
+<section id="schedule" class="hidden">
+  <div id="banner" class="hidden"><span id="bannerText"></span><button id="bannerCancel">Cancel</button></div>
+  <div id="grid"></div>
+</section>
+
+<button id="homeBtn" class="hidden">Back</button>
+
+<div id="pull"><span>↻</span></div>
+
+<div id="modal" class="overlay hidden"><div class="sheet" id="sheet"></div></div>
+
+<script>
+const DAY_START = 8 * 60 + 30;   // 8:30 AM
+const DAY_END = 18 * 60 + 30;    // 6:30 PM
+const STEP = 15;
+const ROWS = (DAY_END - DAY_START) / STEP;
+const DAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+const SHOWN_DAYS = [1, 2, 3, 4, 5]; // weekdays shown on the schedule (0 = Sun … 6 = Sat)
+const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+
+let data = { students: [] };
+let weekStart = sunday(toKey(new Date()));
+let picking = null; // { mode: 'once' | 'all', occ }
+
+// ---------- dates (stored as 'YYYY-MM-DD') ----------
+function toKey(d) { return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0'); }
+function fromKey(k) { const [y, m, d] = k.split('-').map(Number); return new Date(y, m - 1, d); }
+function addDays(k, n) { const d = fromKey(k); d.setDate(d.getDate() + n); return toKey(d); }
+function daysBetween(a, b) { const x = fromKey(a), y = fromKey(b); return Math.round((Date.UTC(y.getFullYear(), y.getMonth(), y.getDate()) - Date.UTC(x.getFullYear(), x.getMonth(), x.getDate())) / 86400000); }
+function sunday(k) { return addDays(k, -fromKey(k).getDay()); }
+function fmtDate(k) { const d = fromKey(k); return DAYS[d.getDay()] + ' ' + MONTHS[d.getMonth()] + ' ' + d.getDate(); }
+function fmtTime(m) { const h = Math.floor(m / 60), mm = m % 60; return ((h + 11) % 12 + 1) + ':' + String(mm).padStart(2, '0') + ' ' + (h < 12 ? 'AM' : 'PM'); }
+
+// ---------- recurrence ----------
+// Each student has slots: [{ anchor: first lesson date, start: minutes, until: date (exclusive) or null, freq, exceptions }]
+// where exceptions are keyed by the original lesson date: { cancel: true } or { date, start }.
+// A cancelled lesson that had been moved keeps its { date, start } so it can be restored there.
+function matches(freq, anchor, k) {
+  if (k < anchor) return false;
+  const a = fromKey(anchor), d = fromKey(k);
+  if (a.getDay() !== d.getDay()) return false;
+  if (freq === 'weekly') return true;
+  if (freq === 'once') return k === anchor;
+  if (freq === 'biweekly') return daysBetween(anchor, k) % 14 === 0;}
+
+function slotMatches(sl, k) { return (!sl.until || k < sl.until) && matches(sl.freq, sl.anchor, k); }
+function slotFor(s, k) {
+  return s.slots.find(sl => slotMatches(sl, k));
+}
+
+// All lessons between from and to (inclusive), after exceptions are applied. si = index of the slot.
+function occurrences(from, to, students = data.students) {
+  const out = [];
+  for (const s of students) {
+    s.slots.forEach((sl, si) => {
+      for (let k = from; k <= to; k = addDays(k, 1)) {
+        if (slotMatches(sl, k) && !sl.exceptions[k]) out.push({ s, si, orig: k, date: k, start: sl.start, moved: false });
+      }
+      for (const [orig, ex] of Object.entries(sl.exceptions)) {
+        if (!ex.cancel && ex.date >= from && ex.date <= to && slotMatches(sl, orig)) {
+          out.push({ s, si, orig, date: ex.date, start: ex.start, moved: true });
+        }
+      }
+    });
+  }
+  return out;
+}
+
+// Lessons of studentId (from `from` for 12 months) that overlap anyone else.
+function findConflicts(students, studentId, from, onlyOrig) {
+  const to = addDays(from, 365);
+  const all = occurrences(from, to, students);
+  const mine = all.filter(o => o.s.id === studentId && (!onlyOrig || o.orig === onlyOrig));
+  const out = [];
+  for (const m of mine) {
+    for (const o of all) {
+      if (o.s.id === studentId || o.date !== m.date) continue;
+      if (m.start < o.start + lengthFor(o) && o.start < m.start + lengthFor(m)) {
+        out.push(fmtDate(o.date) + ' ' + fmtTime(o.start) + ' — ' + o.s.name);
+      }
+    }
+  }
+  return out;
+}
+
+// Weekly payers pay every lesson; monthly payers every 4 weeks from billingStart.
+function paymentDue(o) {
+  const b = billingFor(o);
+  if (b.billing === 'weekly') return true;
+  const d = daysBetween(b.start, o.orig);
+  return d >= 0 && d % 28 === 0;
+}
+function amountDue(o) {
+  if (o.s.amountOverrides && o.s.amountOverrides[o.orig] != null) return Number(o.s.amountOverrides[o.orig]);
+  const b = billingFor(o); return Number((Number(b.rate || 0) * (b.billing === 'monthly' ? 4 : 1)).toFixed(2)); }
+// Billing in effect for a lesson: the original setup, or the latest change on/before it.
+function billingFor(o) {
+  let b = { billing: o.s.billing, rate: o.s.rate, start: o.s.billingStart, payType: o.s.payType || '', poNumber: o.s.poNumber || '' };
+  for (const c of o.s.billingChanges || []) if (c.from <= o.orig) {
+    // Staying monthly keeps the current 4-week cycle unless the change restarts it.
+    const billing = c.billing !== undefined ? c.billing : b.billing;
+    const keep = !c.restart && billing === 'monthly' && b.billing === 'monthly' && b.start && b.start <= c.from;
+    b = { billing, rate: c.rate !== undefined ? c.rate : b.rate, start: keep ? b.start : c.from,
+      payType: c.payType !== undefined ? c.payType : b.payType, poNumber: c.poNumber !== undefined ? c.poNumber : b.poNumber };
+  }
+  return b;
+}
+// Lesson length for a lesson: a one-time length, or the latest change on/before it, or the original.
+function lengthFor(o) {
+  if (o.s.lengthOverrides && o.s.lengthOverrides[o.orig] != null) return Number(o.s.lengthOverrides[o.orig]);
+  let len = o.s.length;
+  for (const c of o.s.billingChanges || []) if (c.from <= o.orig && c.length != null) len = c.length;
+  return Number(len);
+}
+// Payment type for a lesson: a one-time choice for that lesson, or whatever billing is in effect.
+function payFor(o) {
+  const one = o.s.payOverrides && o.s.payOverrides[o.orig];
+  if (one) return one;
+  const b = billingFor(o);
+  return { payType: b.payType, poNumber: b.poNumber };
+}
+function isPaid(o) { return !!(o.s.paid && o.s.paid[o.orig]); }
+// Red until paid: the lesson itself if due, or for monthly payers the due lesson of its 4-week cycle.
+function owes(o) {
+  if (paymentDue(o)) return !isPaid(o);
+  const b = billingFor(o);
+  if (b.billing !== 'monthly') return false;
+  const d = daysBetween(b.start, o.orig);
+  return d >= 0 && !(o.s.paid && o.s.paid[addDays(b.start, d - d % 28)]);
+}
+
+// Birthday month/day dropdowns for the add/edit forms (prefix 'f' or 'e').
+function bdaySelects(p, s) {
+  const months = MONTHS.map((m, i) => `<option value="${i + 1}"${+s.bdayMonth === i + 1 ? ' selected' : ''}>${m}</option>`).join('');
+  let days = '';
+  for (let d = 1; d <= 31; d++) days += `<option value="${d}"${+s.bdayDay === d ? ' selected' : ''}>${d}</option>`;
+  return `<div class="row">
+    <label style="flex:1">Birthday month<select id="${p}BMonth"><option value="">—</option>${months}</select></label>
+    <label style="flex:1">Birthday day<select id="${p}BDay"><option value="">—</option>${days}</select></label></div>`;
+}
+
+// Payment type dropdown + PO number box for the add/edit forms (prefix 'f' or 'e').
+function paySelects(p, s) {
+  const opts = ['Zelle', 'Cash', 'PO'].map(t => `<option${s.payType === t ? ' selected' : ''}>${t}</option>`).join('');
+  return `<label>Payment type<select id="${p}Pay"><option value="">—</option>${opts}</select></label>
+    <label id="${p}POWrap"${s.payType === 'PO' ? '' : ' class="hidden"'}>PO number<input id="${p}PO" value="${esc(s.poNumber || '')}"></label>`;
+}
+function wirePay(p) {
+  const sel = document.getElementById(p + 'Pay');
+  sel.onchange = () => document.getElementById(p + 'POWrap').classList.toggle('hidden', sel.value !== 'PO');
+}
+
+// The birthday on or after lesson date k (day clamped to the month, so Feb 29 -> Feb 28).
+function nextBirthday(s, k) {
+  const m = +s.bdayMonth, d = +s.bdayDay;
+  let y = fromKey(k).getFullYear();
+  const make = yr => toKey(new Date(yr, m - 1, Math.min(d, new Date(yr, m, 0).getDate())));
+  let b = make(y);
+  if (b < k) b = make(y + 1);
+  return b;
+}
+
+// Flag the lesson on the birthday, or else the last lesson in the 4 weeks before it.
+function isBirthdayLesson(o) {
+  if (!o.s.bdayMonth || !o.s.bdayDay) return false;
+  const b = nextBirthday(o.s, o.date);
+  if (daysBetween(o.date, b) > 28) return false;
+  return b === o.date || occurrences(addDays(o.date, 1), b, [o.s]).length === 0;
+}
+
+// ---------- storage ----------
+async function load() {
+  const r = await fetch('/api/data');
+  data = await r.json();
+  // Older data kept one book per student; move it into the books list.
+  for (const s of data.students) {
+    if (!s.books) s.books = s.book ? [{ title: s.book, status: s.bookStatus || null }] : [];
+    delete s.book;
+    delete s.bookStatus;
+    // Older data kept frequency on the student; move it onto each lesson slot.
+    for (const sl of s.slots) if (!sl.freq) sl.freq = s.frequency || 'weekly';
+    delete s.frequency;
+    // Older data kept cancels/moves on the student; move each onto the slot it belongs to.
+    for (const sl of s.slots) sl.exceptions = sl.exceptions || {};
+    for (const [k, ex] of Object.entries(s.exceptions || {})) { const sl = slotFor(s, k); if (sl) sl.exceptions[k] = ex; }
+    delete s.exceptions;
+  }
+}
+async function save() {
+  await fetch('/api/data', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(data) });
+}
+// Change log: one plain sentence per action, timestamped by the server in changelog.txt.
+function logChange(text) { fetch('/api/log', { method: 'POST', body: text }).catch(() => {}); }
+const DETAIL_FIELDS = ['name', 'address', 'city', 'zip', 'phone', 'age', 'bdayMonth', 'bdayDay', 'payType', 'poNumber', 'parents'];
+function detailDiff(a, b) {
+  return DETAIL_FIELDS.filter(k => String(a[k] ?? '') !== String(b[k] ?? '')).map(k => `${k} "${a[k] ?? ''}" → "${b[k] ?? ''}"`).join(', ');
+}
+const payText = p => p.payType ? p.payType + (p.poNumber ? ' #' + p.poNumber : '') : '—';
+
+// ---------- modals ----------
+const modal = document.getElementById('modal');
+const sheet = document.getElementById('sheet');
+function openSheet(html) { sheet.innerHTML = html; modal.classList.remove('hidden'); sheet.scrollTop = 0; document.body.style.overflow = 'hidden'; }
+function closeSheet() { modal.classList.add('hidden'); sheet.innerHTML = ''; document.body.style.overflow = ''; }
+function esc(t) { return String(t).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c])); }
+
+function ask(title, message) {
+  return new Promise(resolve => {
+    openSheet(`<h2>${esc(title)}</h2><p>${esc(message)}</p>
+      <div class="row"><button class="btn" id="askNo">No</button><button class="btn primary" id="askYes">Yes</button></div>`);
+    document.getElementById('askYes').onclick = () => { closeSheet(); resolve(true); };
+    document.getElementById('askNo').onclick = () => { closeSheet(); resolve(false); };
+  });
+}
+
+async function conflictOk(conflicts) {
+  if (!conflicts.length) return true;
+  const list = conflicts.slice(0, 10).join('\n') + (conflicts.length > 10 ? `\n…and ${conflicts.length - 10} more` : '');
+  return ask('Schedule conflict', 'This overlaps with:\n' + list + '\n\nProceed anyway?');
+}
+
+// ---------- views ----------
+let statsWeek = sunday(toKey(new Date()));
+function renderStats() {
+  const weekEnd = addDays(statsWeek, 6);
+  const mon = addDays(statsWeek, 1);
+  const occ = occurrences(statsWeek, weekEnd);
+  const booked = new Set(occ.map(o => o.s.id)).size;
+  const paidSum = list => list.reduce((t, o) => t + (paymentDue(o) && isPaid(o) ? amountDue(o) : 0), 0);
+  const dueSum = list => list.reduce((t, o) => t + (paymentDue(o) ? amountDue(o) : 0), 0);
+  const money = paidSum(occ);
+  const monthStart = mon.slice(0, 8) + '01';
+  const monthEnd = addDays(addDays(monthStart, 31).slice(0, 8) + '01', -1);
+  const monthOcc = occurrences(monthStart, weekEnd < monthEnd ? weekEnd : monthEnd);
+  const monthMoney = paidSum(monthOcc);
+  const fmtMoney = n => '$' + n.toFixed(2).replace(/\.00$/, '');
+  document.getElementById('statMoneyF').textContent = fmtMoney(dueSum(occ));
+  document.getElementById('statMonthF').textContent = fmtMoney(dueSum(monthOcc));
+  const hours = occ.reduce((t, o) => t + lengthFor(o), 0) / 60;
+  document.getElementById('sRange').textContent = fmtDate(mon).slice(4) + ' – ' + fmtDate(addDays(statsWeek, 5)).slice(4);
+  document.getElementById('statStudents').textContent = booked;
+  document.getElementById('statMoney').textContent = '$' + money.toFixed(2).replace(/\.00$/, '');
+  document.getElementById('statMonth').textContent = '$' + monthMoney.toFixed(2).replace(/\.00$/, '');
+  document.getElementById('statHours').textContent = Number(hours.toFixed(2));
+}
+
+function showHome() {
+  picking = null;
+  document.getElementById('home').classList.remove('hidden');
+  document.getElementById('schedule').classList.add('hidden');
+  document.getElementById('student').classList.add('hidden');
+  document.getElementById('map').classList.add('hidden');
+  document.getElementById('mileage').classList.add('hidden');
+  document.getElementById('stats').classList.add('hidden');
+  document.getElementById('homeBtn').classList.add('hidden');
+  document.getElementById('homeBtn').textContent = 'Back';
+  document.getElementById('homeBtn').onclick = showHome;
+  document.getElementById('prevWeek').classList.add('hidden');
+  document.getElementById('nextWeek').classList.add('hidden');
+  document.getElementById('title').textContent = 'First Notes';
+  window.scrollTo(0, 0);
+
+  const list = document.getElementById('studentList');
+  list.innerHTML = data.students.map((s, i) => {
+    const next = nextLesson(s);
+    const when = next ? DAYS[fromKey(next.date).getDay()] + ' · ' + fmtTime(next.start) : '— · —';
+    return `<div class="srow" data-i="${i}"><div class="name">${esc(s.name)}</div>
+      <div class="meta">Age ${esc(s.age || '—')} · ${when}</div>
+      ${s.books.map(b => `<div class="meta">${esc(b.title) + bookBadge(b.status)}</div>`).join('') || '<div class="meta">No book</div>'}</div>`;
+  }).join('') || '<div class="meta">No students yet.</div>';
+  // Back from a student opened here returns to the same spot in the list.
+  list.querySelectorAll('.srow').forEach(r => r.onclick = () => {
+    const y = window.scrollY;
+    showStudent(data.students[+r.dataset.i]);
+    document.getElementById('homeBtn').onclick = () => { showHome(); window.scrollTo(0, y); };
+  });
+}
+
+function nextLesson(s) {
+  const today = toKey(new Date());
+  return occurrences(today, addDays(today, 365), [s]).sort((a, b) => a.date.localeCompare(b.date) || a.start - b.start)[0];
+}
+
+function bookBadge(status) {
+  if (status === 'need') return '<span class="badge">Need next book</span>';
+  if (status === 'ordered') return '<span class="badge" style="background:#84a98c">Next book ordered</span>';
+  return '';
+}
+
+function showStudent(s) {
+  document.getElementById('home').classList.add('hidden');
+  document.getElementById('schedule').classList.add('hidden');
+  document.getElementById('homeBtn').classList.remove('hidden');
+  document.getElementById('prevWeek').classList.add('hidden');
+  document.getElementById('nextWeek').classList.add('hidden');
+  document.getElementById('title').textContent = s.name;
+  document.getElementById('map').classList.add('hidden');
+  document.getElementById('mileage').classList.add('hidden');
+  const el = document.getElementById('student');
+  el.classList.remove('hidden');
+  el.dataset.id = s.id;
+
+  const next = nextLesson(s);
+  const notes = (s.notes || []).slice().sort((a, b) => b.date.localeCompare(a.date));
+  el.innerHTML = `
+    <div class="card"><h3>Details</h3>
+      <div class="line"><b>Age:</b> ${esc(s.age || '—')}</div>
+      <div class="line"><b>Birthday:</b> ${s.bdayMonth && s.bdayDay ? MONTHS[s.bdayMonth - 1] + ' ' + s.bdayDay : '—'}</div>
+      <div class="line"><b>Address:</b> ${esc([s.address, s.city, s.zip].filter(Boolean).join(', ') || '—')}</div>
+      <div class="line"><b>Phone:</b> ${esc(s.phone || '—')}</div>
+      <div class="line"><b>Parents:</b> ${esc(s.parents || '—')}</div>
+      <div class="line"><b>Payment:</b> ${(p => esc(p.payType ? p.payType + (p.payType === 'PO' && p.poNumber ? ' #' + p.poNumber : '') : '—'))(billingFor({ s, orig: toKey(new Date()) }))}</div>
+      <div class="line"><b>Next lesson:</b> ${next ? fmtDate(next.date) + ' at ' + fmtTime(next.start) : '—'}</div>
+      <button class="btn" id="sEdit">Edit</button>
+      <button class="btn danger" id="sDelete">Delete student</button></div>
+    <div class="card"><h3>Current Books</h3>
+      ${s.books.map((b, i) => `<div class="line book" data-i="${i}"><span>${esc(b.title)}${bookBadge(b.status)}</span><span class="chev">›</span></div>`).join('') || '<div class="line">—</div>'}
+      <button class="btn" id="sBook">Add book</button></div>
+    <div class="card"><h3>Notes</h3>
+      <button class="btn" id="sNote">Add note</button>
+      ${notes.map(n => `<div class="note"><div class="date">${fmtDate(n.date)}</div>${esc(n.text)}</div>`).join('')}</div>`;
+
+  const $ = id => document.getElementById(id);
+  $('sEdit').onclick = () => editStudentForm(s);
+  $('sDelete').onclick = async () => {
+    if (!(await ask('Delete student', `Delete ${s.name}? This removes their lessons, payments, notes and books.`))) return;
+    data.students = data.students.filter(x => x !== s);
+    await save();
+    logChange(`${s.name}: deleted student`);
+    showHome();
+  };
+  $('sBook').onclick = () => bookForm(s, null);
+  el.querySelectorAll('.book').forEach(r => r.onclick = () => bookForm(s, +r.dataset.i));
+  $('sNote').onclick = () => addNoteForm(s);
+}
+
+// ---------- map ----------
+const DAY_COLORS = ['#e63946', '#f4a261', '#e9c46a', '#2a9d8f', '#457b9d', '#6a4c93', '#d81b60'];
+const NO_SLOT_COLOR = '#999';
+let leafletMap = null, pinLayer = null;
+
+// The student's regular weekly slot (not a trial), or null.
+function regularSlot(s) {
+  return s.slots.find(sl => !sl.until && sl.freq !== 'once') || null;
+}
+
+async function showMap() {
+  document.getElementById('home').classList.add('hidden');
+  document.getElementById('schedule').classList.add('hidden');
+  document.getElementById('student').classList.add('hidden');
+  document.getElementById('map').classList.remove('hidden');
+  document.getElementById('mileage').classList.add('hidden');
+  document.getElementById('homeBtn').classList.remove('hidden');
+  document.getElementById('prevWeek').classList.add('hidden');
+  document.getElementById('nextWeek').classList.add('hidden');
+  document.getElementById('title').textContent = 'Map';
+
+  if (!leafletMap) {
+    leafletMap = L.map('mapEl').setView([39.8, -98.6], 4);
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19, attribution: '© OpenStreetMap' }).addTo(leafletMap);
+    pinLayer = L.layerGroup().addTo(leafletMap);
+    document.getElementById('legend').innerHTML = DAYS.map((d, i) => `<div><i style="background:${DAY_COLORS[i]}"></i>${d}</div>`).join('')
+      + `<div><i style="background:${NO_SLOT_COLOR}"></i>No slot</div>`;
+  }
+  leafletMap.invalidateSize();
+
+  const msg = document.getElementById('mapMsg');
+  const withAddress = data.students.filter(s => s.address);
+  let changed = false, notFound = 0;
+  for (const s of withAddress) {
+    const key = [s.address, s.city, s.zip].filter(Boolean).join(', ');
+    if (s.geo && s.geo.key === key) continue;
+    msg.textContent = `Looking up ${s.name}'s address…`;
+    msg.classList.remove('hidden');
+    try {
+      const r = await fetch('/api/geocode?q=' + encodeURIComponent(key));
+      s.geo = { key, ...(r.ok ? (await r.json()) || { lat: null, lon: null } : { lat: null, lon: null }) };
+      if (r.ok) changed = true;
+    } catch (e) { s.geo = null; }
+  }
+  if (changed) await save();
+
+  pinLayer.clearLayers();
+  const points = [];
+  // Group by location, then by color: same color shares a pin, different colors get nudged apart.
+  const places = {};
+  for (const s of withAddress) {
+    if (!s.geo || s.geo.lat == null) { notFound++; continue; }
+    const sl = regularSlot(s);
+    const color = sl ? DAY_COLORS[fromKey(sl.anchor).getDay()] : NO_SLOT_COLOR;
+    const when = sl ? DAYS[fromKey(sl.anchor).getDay()] + ' ' + fmtTime(sl.start) : 'No regular slot';
+    const place = places[s.geo.lat + ',' + s.geo.lon] = places[s.geo.lat + ',' + s.geo.lon] || { lat: s.geo.lat, lon: s.geo.lon, colors: {} };
+    (place.colors[color] = place.colors[color] || []).push(`<b>${esc(s.name)}</b> · ${when}`);
+  }
+  for (const place of Object.values(places)) {
+    const colors = Object.keys(place.colors);
+    colors.forEach((color, i) => {
+      const angle = (2 * Math.PI * i) / colors.length;
+      const ox = colors.length > 1 ? Math.round(12 * Math.cos(angle)) : 0;
+      const oy = colors.length > 1 ? Math.round(12 * Math.sin(angle)) : 0;
+      const icon = L.divIcon({ className: '', iconSize: [14, 14], iconAnchor: [7 - ox, 7 - oy], popupAnchor: [ox, oy - 7],
+        html: `<div style="width:14px;height:14px;border-radius:50%;background:${color};border:2px solid #000;box-shadow:0 1px 3px #0006;box-sizing:border-box"></div>` });
+      L.marker([place.lat, place.lon], { icon }).bindPopup(place.colors[color].join('<br>')).addTo(pinLayer);
+    });
+    points.push([place.lat, place.lon]);
+  }
+  if (points.length) leafletMap.fitBounds(points, { padding: [40, 40], maxZoom: 14 });
+
+  const noAddress = data.students.length - withAddress.length;
+  const notes = [];
+  if (noAddress) notes.push(`${noAddress} without an address`);
+  if (notFound) notes.push(`${notFound} address${notFound > 1 ? 'es' : ''} not found`);
+  msg.textContent = notes.length ? 'Not shown: ' + notes.join(', ') : '';
+  msg.classList.toggle('hidden', !notes.length);
+}
+
+// ---------- mileage ----------
+let mileWeek = sunday(toKey(new Date()));
+const milesCache = {}; // 'from -> to' : miles (null = no route) — server keeps the saved copy
+
+function homeAddr() {
+  data.settings = data.settings || {};
+  data.settings.home = data.settings.home || { address: '', city: '', zip: '' };
+  return data.settings.home;
+}
+function addrText(a) { return [a.address, a.city, a.zip].filter(Boolean).join(', '); }
+
+// Stops for one day in lesson order, with home at both ends and between lessons more than 1.5 hours apart. Empty if no lessons.
+function dayStops(k) {
+  const lessons = occurrences(k, k).sort((a, b) => a.start - b.start);
+  if (!lessons.length) return [];
+  const home = { label: 'Home', addr: addrText(homeAddr()) };
+  const stops = [home];
+  lessons.forEach((o, i) => {
+    if (i && o.start - (lessons[i - 1].start + lengthFor(lessons[i - 1])) > 90) stops.push(home);
+    stops.push({ label: o.s.name, addr: o.s.address ? addrText(o.s) : '' });
+  });
+  return [...stops, home];
+}
+
+async function legMiles(from, to) {
+  const key = from + ' -> ' + to;
+  if (!(key in milesCache)) {
+    const r = await fetch('/api/route?from=' + encodeURIComponent(from) + '&to=' + encodeURIComponent(to));
+    const body = await r.json();
+    if (!r.ok) throw new Error(body.error || 'lookup failed');
+    milesCache[key] = body.miles;
+  }
+  return milesCache[key];
+}
+
+// Legs for each day from `from` to `to`: { k, legs: [{ from, to, miles, note }], total }
+async function mileageDays(from, to) {
+  const days = [];
+  for (let k = from; k <= to; k = addDays(k, 1)) {
+    const stops = dayStops(k);
+    if (!stops.length) continue;
+    const legs = [];
+    for (let i = 1; i < stops.length; i++) {
+      const a = stops[i - 1], b = stops[i];
+      const leg = { from: a.label, to: b.label, miles: null, note: '' };
+      if (!a.addr || !b.addr) leg.note = 'no address';
+      else {
+        leg.miles = await legMiles(a.addr, b.addr);
+        if (leg.miles == null) leg.note = 'not found';
+      }
+      legs.push(leg);
+    }
+    days.push({ k, legs, total: legs.reduce((t, l) => t + (l.miles || 0), 0) });
+  }
+  return days;
+}
+const sumMiles = days => days.reduce((t, d) => t + d.total, 0);
+const fmtMi = n => (Math.round(n * 10) / 10).toFixed(1) + ' mi';
+
+async function showMileage() {
+  ['home', 'schedule', 'student', 'map'].forEach(id => document.getElementById(id).classList.add('hidden'));
+  document.getElementById('homeBtn').classList.remove('hidden');
+  document.getElementById('prevWeek').classList.add('hidden');
+  document.getElementById('nextWeek').classList.add('hidden');
+  document.getElementById('title').textContent = 'Mileage';
+  const el = document.getElementById('mileage');
+  el.classList.remove('hidden');
+  el.innerHTML = '<div class="meta">Calculating…</div>';
+
+  const home = homeAddr();
+  const weekEnd = addDays(mileWeek, 6);
+  const mon = addDays(mileWeek, 1);
+  const monthStart = mon.slice(0, 8) + '01';
+  const monthEnd = addDays(addDays(monthStart, 31).slice(0, 8) + '01', -1);
+  const yearEnd = mon.slice(0, 4) + '-12-31';
+  const monthLabel = fromKey(mon).toLocaleString('en-US', { month: 'long' }) + ' ' + mon.slice(0, 4);
+  let week, monthTotal, yearTotal;
+  try {
+    week = await mileageDays(mileWeek, weekEnd);
+    monthTotal = sumMiles(await mileageDays(monthStart, weekEnd < monthEnd ? weekEnd : monthEnd));
+    yearTotal = sumMiles(await mileageDays(mon.slice(0, 5) + '01-01', weekEnd < yearEnd ? weekEnd : yearEnd));
+  } catch (e) {
+    el.innerHTML = `<div class="card"><div class="err">Couldn't get driving distances: ${esc(e.message)}</div></div>`;
+    return;
+  }
+
+  el.innerHTML = `
+    <div class="card"><div class="line"><b>Home:</b> ${esc(addrText(home))}</div><button class="btn" id="mHome">Edit</button></div>
+    <div class="totals">
+      <div class="stat"><div class="label">${fmtDate(mon).slice(4)} – ${fmtDate(addDays(mileWeek, 5)).slice(4)}</div><div class="value">${fmtMi(sumMiles(week))}</div></div>
+      <div class="stat"><div class="label">${monthLabel}</div><div class="value">${fmtMi(monthTotal)}</div></div>
+      <div class="stat"><div class="label">${mon.slice(0, 4)}</div><div class="value">${fmtMi(yearTotal)}</div></div>
+    </div>
+    <div class="weeknav"><button id="mPrev">◀</button><span>${fmtDate(addDays(mileWeek, 1)).slice(4)} – ${fmtDate(addDays(mileWeek, 5)).slice(4)}</span><button id="mNext">▶</button></div>
+    ${week.map(d => `<div class="card"><h3>${fmtDate(d.k)}</h3>
+      ${d.legs.map(l => `<div class="leg"><span>${esc(l.from)} → ${esc(l.to)}</span><span class="mi">${l.note || fmtMi(l.miles)}</span></div>`).join('')}
+      <div class="daytotal"><span>Day total</span><span>${fmtMi(d.total)}</span></div></div>`).join('') || '<div class="card"><div class="line">No lessons this week.</div></div>'}`;
+
+  document.getElementById('mHome').onclick = () => editHomeForm();
+  document.getElementById('mPrev').onclick = () => { mileWeek = addDays(mileWeek, -7); showMileage(); };
+  document.getElementById('mNext').onclick = () => { mileWeek = addDays(mileWeek, 7); showMileage(); };
+}
+
+function editHomeForm() {
+  const h = homeAddr();
+  openSheet(`<h2>Home address</h2>
+    <label>Street address<input id="hAddress" value="${esc(h.address)}"></label>
+    <label>City<input id="hCity" value="${esc(h.city)}"></label>
+    <label>Zip<input id="hZip" inputmode="numeric" value="${esc(h.zip)}"></label>
+    <div class="row"><button class="btn" id="hCancel">Cancel</button><button class="btn primary" id="hSave">Save</button></div>`);
+  const $ = id => document.getElementById(id);
+  $('hCancel').onclick = closeSheet;
+  $('hSave').onclick = async () => {
+    const oldHome = addrText(h);
+    data.settings.home = { address: $('hAddress').value.trim(), city: $('hCity').value.trim(), zip: $('hZip').value.trim() };
+    closeSheet();
+    await save();
+    logChange(`Home address "${oldHome}" → "${addrText(data.settings.home)}"`);
+    showMileage();
+  };
+}
+
+function editStudentForm(s) {
+  openSheet(`<div class="stick-top"><h2>Edit student</h2></div>
+    <label>Name<input id="eName" value="${esc(s.name)}"></label>
+    <label>Street address<input id="eAddress" value="${esc(s.address || '')}"></label>
+    <label>City<input id="eCity" value="${esc(s.city || '')}"></label>
+    <label>Zip<input id="eZip" inputmode="numeric" value="${esc(s.zip || '')}"></label>
+    <label>Phone<input id="ePhone" type="tel" value="${esc(s.phone || '')}"></label>
+    <label>Age<input id="eAge" type="number" inputmode="numeric" value="${esc(s.age || '')}"></label>
+    ${bdaySelects('e', s)}
+    <label>Parents' names<input id="eParents" value="${esc(s.parents || '')}"></label>
+    ${paySelects('e', s)}
+    <div class="err" id="eErr"></div>
+    <div class="row stick-bottom"><button class="btn" id="eCancel">Cancel</button><button class="btn primary" id="eSave">Save</button></div>`);
+  const $ = id => document.getElementById(id);
+  wirePay('e');
+  $('eCancel').onclick = closeSheet;
+  $('eSave').onclick = async () => {
+    if (!$('eName').value.trim()) return ($('eErr').textContent = 'Name is required.');
+    const before = { ...s };
+    s.name = $('eName').value.trim();
+    s.address = $('eAddress').value.trim();
+    s.city = $('eCity').value.trim();
+    s.zip = $('eZip').value.trim();
+    s.phone = $('ePhone').value.trim();
+    s.age = $('eAge').value;
+    s.bdayMonth = $('eBMonth').value;
+    s.bdayDay = $('eBDay').value;
+    s.payType = $('ePay').value;
+    s.poNumber = s.payType === 'PO' ? $('ePO').value.trim() : '';
+    s.parents = $('eParents').value.trim();
+    closeSheet();
+    await save();
+    const diff = detailDiff(before, s);
+    if (diff) logChange(`${before.name}: edited details — ${diff}`);
+    showStudent(s);
+  };
+}
+
+// Add a book (i = null) or change / update the status of book i.
+function bookForm(s, i) {
+  const b = i == null ? null : s.books[i];
+  const statusBtn = !b ? '' : !b.status ? '<button class="btn" id="kNeed">Need next book</button>'
+    : b.status === 'need' ? '<button class="btn" id="kOrdered">Mark ordered</button>' : '';
+  openSheet(`<h2>${b ? 'Change book' : 'Add book'}</h2>${b ? `<p>${esc(b.title)}${bookBadge(b.status)}</p>` : ''}
+    <label>Book<input id="kBook" value="${esc(b ? b.title : '')}"></label>
+    <div class="row"><button class="btn" id="kCancel">${b ? 'Close' : 'Cancel'}</button><button class="btn primary" id="kSave">Save</button></div>
+    ${statusBtn}`);
+  const $ = id => document.getElementById(id);
+  const setStatus = async status => {
+    const old = b.status; b.status = status; closeSheet(); await save();
+    logChange(`${s.name}: book "${b.title}" status ${old || 'none'} → ${status}`); showStudent(s);
+  };
+  $('kCancel').onclick = closeSheet;
+  if ($('kNeed')) $('kNeed').onclick = () => setStatus('need');
+  if ($('kOrdered')) $('kOrdered').onclick = () => setStatus('ordered');
+  $('kSave').onclick = async () => {
+    const title = $('kBook').value.trim();
+    closeSheet();
+    if (!title) return;
+    const msg = b ? `${s.name}: book "${b.title}" → "${title}"` : `${s.name}: added book "${title}"`;
+    if (b) { b.title = title; b.status = null; }
+    else s.books.push({ title, status: null });
+    await save();
+    logChange(msg);
+    showStudent(s);
+  };
+}
+
+function addNoteForm(s) {
+  openSheet(`<h2>Add note</h2>
+    <label>Date<input id="nDate" type="date" value="${toKey(new Date())}"></label>
+    <label>Note<textarea id="nText" rows="5"></textarea></label>
+    <div class="row"><button class="btn" id="nCancel">Cancel</button><button class="btn primary" id="nSave">Save</button></div>`);
+  const $ = id => document.getElementById(id);
+  $('nCancel').onclick = closeSheet;
+  $('nSave').onclick = async () => {
+    const note = { date: $('nDate').value || toKey(new Date()), text: $('nText').value.trim() };
+    closeSheet();
+    if (!note.text) return;
+    s.notes = s.notes || [];
+    s.notes.push(note);
+    await save();
+    logChange(`${s.name}: added note dated ${note.date}: ${note.text}`);
+    showStudent(s);
+  };
+}
+
+function showSchedule() {
+  document.getElementById('home').classList.add('hidden');
+  document.getElementById('student').classList.add('hidden');
+  document.getElementById('map').classList.add('hidden');
+  document.getElementById('mileage').classList.add('hidden');
+  document.getElementById('schedule').classList.remove('hidden');
+  document.getElementById('homeBtn').classList.remove('hidden');
+  document.getElementById('homeBtn').textContent = 'Back';
+  document.getElementById('homeBtn').onclick = showHome;
+  document.getElementById('prevWeek').classList.remove('hidden');
+  document.getElementById('nextWeek').classList.remove('hidden');
+  renderGrid();
+}
+
+function renderGrid() {
+  const grid = document.getElementById('grid');
+  const end = addDays(weekStart, 6);
+  document.getElementById('title').textContent = fmtDate(addDays(weekStart, SHOWN_DAYS[0])).slice(4) + ' – ' + fmtDate(addDays(weekStart, SHOWN_DAYS[SHOWN_DAYS.length - 1])).slice(4);
+  grid.style.gridTemplateColumns = `44px repeat(${SHOWN_DAYS.length}, 1fr)`;
+  document.getElementById('banner').classList.toggle('hidden', !picking);
+  grid.classList.toggle('picking', !!picking);
+  if (picking) document.getElementById('bannerText').textContent = `Tap a new slot for ${picking.occ.s.name}` + (picking.mode === 'all' ? ' (all lessons)' : ' (this week)');
+  // Day-name row sticks right under the header (and the pick-mode banner when it's showing).
+  const stickTop = document.querySelector('header').offsetHeight + (picking ? document.getElementById('banner').offsetHeight : 0);
+  grid.style.setProperty('--dayhead-top', stickTop + 'px');
+
+  const today = toKey(new Date());
+  let html = '<div class="dayhead"></div>';
+  SHOWN_DAYS.forEach((d, c) => {
+    const k = addDays(weekStart, d);
+    html += `<div class="dayhead${k === today ? ' today' : ''}" style="grid-column:${c + 2}">${DAYS[d]}<br>${fromKey(k).getDate()}</div>`;
+  });
+  for (let r = 0; r < ROWS; r++) {
+    const m = DAY_START + r * STEP;
+    const row = r + 2;
+    const hour = m % 60 === 0;
+    html += `<div class="time" style="grid-row:${row};grid-column:1">${m % 30 === 0 ? fmtTime(m).replace(' ', '') : ''}</div>`;
+    SHOWN_DAYS.forEach((d, c) => {
+      html += `<div class="cell${hour ? ' hour' : ''}${r === ROWS - 1 ? ' last' : ''}" style="grid-row:${row};grid-column:${c + 2}" data-day="${d}" data-min="${m}"></div>`;
+    });
+  }
+  const occ = occurrences(weekStart, end);
+  occ.forEach((o, i) => {
+    const row = (o.start - DAY_START) / STEP + 2;
+    const span = lengthFor(o) / STEP;
+    const col = SHOWN_DAYS.indexOf(fromKey(o.date).getDay()) + 2;
+    if (col < 2) return; // lesson on a day that isn't shown
+    html += `<div class="lesson${o.moved ? ' moved' : ''}${owes(o) ? ' unpaid' : ''}" data-i="${i}" style="grid-row:${row} / span ${span};grid-column:${col}"><div class="lname">${isBirthdayLesson(o) ? '🎂' : ''}${esc(o.s.name)}</div><div class="ltime">${fmtTime(o.start).split(' ')[0]}–${fmtTime(o.start + lengthFor(o)).split(' ')[0]}</div>${paymentDue(o) ? `<div class="due">$${amountDue(o)}${isPaid(o) ? ' Paid' : ''}${payFor(o).payType ? ' ' + esc(payFor(o).payType) : ''}</div>` : ''}</div>`;
+  });
+  grid.innerHTML = html;
+
+  grid.querySelectorAll('.cell').forEach(c => c.onclick = () => cellTapped(addDays(weekStart, +c.dataset.day), +c.dataset.min, c));
+  grid.querySelectorAll('.lesson').forEach(l => l.onclick = () => lessonTapped(occ[+l.dataset.i]));
+}
+
+// ---------- actions ----------
+// First tap highlights the block and asks; a second tap on the same block confirms.
+let armed = null;
+function cellTapped(date, start, cell) {
+  if (armed) { armed.classList.remove('armed'); armed.textContent = ''; armed.style.fontSize = ''; }
+  if (armed !== cell) {
+    armed = cell;
+    cell.classList.add('armed');
+    cell.textContent = (picking ? 'Reschedule ' : 'Schedule ') + fmtTime(start).split(' ')[0] + '?';
+    // Text fills 95% of the block's height, shrinking only if it's too wide.
+    let size = cell.clientHeight * 0.95;
+    cell.style.fontSize = size + 'px';
+    while (cell.scrollWidth > cell.clientWidth && size > 6) cell.style.fontSize = (size -= 0.5) + 'px';
+    return;
+  }
+  armed = null;
+  if (picking) return pickSlot(date, start);
+  addStudentForm(date, start);
+}
+
+function addStudentForm(date, start) {
+  openSheet(`<div class="stick-top"><h2>Add student</h2><p>${fmtDate(date)} at ${fmtTime(start)}</p></div>
+    <label>Student<select id="fWho"><option value="">New student</option>${data.students.map((s, i) => `<option value="${i}">${esc(s.name)}</option>`).join('')}</select></label>
+    <label>Name<input id="fName"></label>
+    <label>Street address<input id="fAddress"></label>
+    <label>City<input id="fCity"></label>
+    <label>Zip<input id="fZip" inputmode="numeric"></label>
+    <label>Phone<input id="fPhone" type="tel"></label>
+    <label>Age<input id="fAge" type="number" inputmode="numeric"></label>
+    ${bdaySelects('f', {})}
+    <label>Parents' names<input id="fParents"></label>
+    ${paySelects('f', {})}
+    <label>Lesson length<select id="fLength"><option value="30">30 minutes</option><option value="45">45 minutes</option><option value="60">60 minutes</option></select></label>
+    <label>Frequency<select id="fFreq"><option value="weekly">Every week</option><option value="biweekly">Every other week</option><option value="once">Single lesson</option></select></label>
+    <label>Billing<select id="fBilling"><option value="weekly">Weekly</option><option value="monthly">Monthly (4-week rolling)</option></select></label>    <label>Rate per lesson ($)<input id="fRate" type="number" inputmode="decimal" step="0.01"></label>
+    <div class="err" id="fErr"></div>
+    <div class="row stick-bottom"><button class="btn" id="fCancel">Cancel</button><button class="btn primary" id="fSave">Save</button></div>`);
+  const $ = id => document.getElementById(id);
+  wirePay('f');
+  // Picking an existing student loads their saved details; frequency defaults to once.
+  $('fWho').onchange = () => {
+    const s = data.students[$('fWho').value];
+    if (!s) return;
+    const fill = { fName: s.name, fAddress: s.address, fCity: s.city, fZip: s.zip, fPhone: s.phone, fAge: s.age,
+      fBMonth: s.bdayMonth, fBDay: s.bdayDay, fParents: s.parents, fPay: s.payType, fPO: s.poNumber,
+      fLength: s.length, fBilling: s.billing, fRate: s.rate, fFreq: 'once' };
+    for (const [id, v] of Object.entries(fill)) $(id).value = v == null ? '' : v;
+    $('fPay').onchange();
+  };
+  $('fCancel').onclick = closeSheet;
+  $('fSave').onclick = async () => {
+    const length = +$('fLength').value;
+    if (!$('fName').value.trim()) return ($('fErr').textContent = 'Name is required.');
+    const existing = data.students[$('fWho').value];
+    if (existing) {
+      if (start + length > DAY_END) return ($('fErr').textContent = 'That lesson would run past 6:30 PM.');
+      // Add one new lesson series to a copy so conflicts can be checked before saving.
+      const copy = JSON.parse(JSON.stringify(data.students));
+      const s = copy.find(x => x.id === existing.id);
+      s.name = $('fName').value.trim();
+      s.address = $('fAddress').value.trim();
+      s.city = $('fCity').value.trim();
+      s.zip = $('fZip').value.trim();
+      s.phone = $('fPhone').value.trim();
+      s.age = $('fAge').value;
+      s.bdayMonth = $('fBMonth').value;
+      s.bdayDay = $('fBDay').value;
+      s.payType = $('fPay').value;
+      s.poNumber = s.payType === 'PO' ? $('fPO').value.trim() : '';
+      s.parents = $('fParents').value.trim();
+      s.slots.push({ anchor: date, start, until: null, freq: $('fFreq').value, exceptions: {} });
+      // New length/billing/rate apply from this lesson onward; earlier lessons keep theirs.
+      const changes = (s.billingChanges || []).filter(c => c.from !== date);
+      changes.push({ from: date, billing: $('fBilling').value, rate: $('fRate').value, length });
+      changes.sort((x, y) => (x.from < y.from ? -1 : 1));
+      s.billingChanges = changes;
+      closeSheet();
+      if (!(await conflictOk(findConflicts(copy, s.id, date)))) return;
+      data.students = copy;
+      await save();
+      const diff = detailDiff(existing, s);
+      const c = changes.find(x => x.from === date);
+      logChange(`${existing.name}: added ${s.slots[s.slots.length - 1].freq} lessons from ${date} at ${fmtTime(start)} — ${length} min, ${c.billing}, rate $${c.rate}` + (diff ? `; edited details — ${diff}` : ''));
+      return renderGrid();
+    }
+    if (start + length > DAY_END) return ($('fErr').textContent = 'That lesson would run past 6:30 PM.');
+    const student = {
+      id: Date.now().toString(36) + Math.random().toString(36).slice(2, 6),
+      name: $('fName').value.trim(),
+      address: $('fAddress').value.trim(),
+      city: $('fCity').value.trim(),
+      zip: $('fZip').value.trim(),
+      phone: $('fPhone').value.trim(),
+      age: $('fAge').value,
+      bdayMonth: $('fBMonth').value,
+      bdayDay: $('fBDay').value,
+      payType: $('fPay').value,
+      poNumber: $('fPay').value === 'PO' ? $('fPO').value.trim() : '',
+      parents: $('fParents').value.trim(),
+      length,
+      billing: $('fBilling').value,
+      billingStart: $('fBilling').value === 'monthly' ? date : null,
+      rate: $('fRate').value,
+      slots: [{ anchor: date, start, until: null, freq: $('fFreq').value, exceptions: {} }],
+      books: []
+    };
+    closeSheet();
+    const proposed = [...data.students, student];
+    if (!(await conflictOk(findConflicts(proposed, student.id, date)))) return;
+    data.students = proposed;
+    await save();
+    logChange(`${student.name}: added student — ${student.slots[0].freq} lessons from ${date} at ${fmtTime(start)}, ${length} min, ${student.billing}, rate $${student.rate}, payment ${payText(student)}`);
+    renderGrid();
+  };
+}
+
+// open = id of a category to show already open (coming back from one of its screens).
+function lessonTapped(o, open) {
+  openSheet(`<h2>${esc(o.s.name)}</h2><p>${fmtDate(o.date)} at ${fmtTime(o.start)} · ${lengthFor(o)} min</p>
+    ${o.s.address ? `<a class="btn" style="text-align:center;text-decoration:none;color:inherit" href="https://maps.apple.com/?daddr=${encodeURIComponent([o.s.address, o.s.city, o.s.zip].filter(Boolean).join(', '))}" target="_blank" rel="noopener">Directions</a>` : ''}
+    <details id="dSched"><summary class="btn">Scheduling</summary>
+    <button class="btn" id="aResched">Reschedule</button>
+    <button class="btn" id="aRestore">Restore cancelled lesson</button>
+    <button class="btn danger" id="aCancel">Cancel lesson</button></details>
+    <details id="dBill"><summary class="btn">Billing</summary>
+    ${paymentDue(o) ? (isPaid(o) ? '<button class="btn" id="aUnpaid">Mark unpaid</button>' : '<button class="btn primary" id="aPaid">Paid</button>') : ''}
+    <button class="btn" id="aBilling">Change billing</button></details>
+    <button class="btn" id="aDetails">Student Details</button>
+    <button class="btn" id="aClose">Back</button>`);
+  const $ = id => document.getElementById(id);
+  // Back closes an open category, or the menu when none is open.
+  $('aClose').onclick = () => {
+    const d = sheet.querySelector('details[open]');
+    if (d) d.open = false; else closeSheet();
+  };
+  // An open category hides everything else except the title and Back.
+  sheet.querySelectorAll('details').forEach(d => d.ontoggle = () => {
+    for (const el of sheet.children) if (el !== d && el.tagName !== 'H2' && el.tagName !== 'P' && el.id !== 'aClose') el.classList.toggle('hidden', d.open);
+  });
+  if (open) $(open).open = true;
+  if ($('aPaid')) $('aPaid').onclick = async () => {
+    closeSheet();
+    o.s.paid = o.s.paid || {};
+    o.s.paid[o.orig] = true;
+    await save();
+    logChange(`${o.s.name}: marked paid for lesson ${o.orig} ($${amountDue(o)})`);
+    renderGrid();
+  };
+  if ($('aUnpaid')) $('aUnpaid').onclick = async () => {
+    closeSheet();
+    delete o.s.paid[o.orig];
+    await save();
+    logChange(`${o.s.name}: marked unpaid for lesson ${o.orig} ($${amountDue(o)})`);
+    renderGrid();
+  };
+  $('aDetails').onclick = () => {
+    closeSheet();
+    showStudent(o.s);
+    $('homeBtn').textContent = 'Back';
+    $('homeBtn').onclick = () => { showSchedule(); lessonTapped(o); };
+  };
+  $('aBilling').onclick = () => changeBillingForm(o);
+  $('aRestore').onclick = () => restoreForm(o);
+  $('aResched').onclick = async () => {
+    const mode = await onceOrAll('Reschedule', o);
+    if (!mode) return;
+    picking = { mode, occ: o };
+    renderGrid();
+  };
+  $('aCancel').onclick = async () => {
+    const mode = await onceOrAll('Cancel lesson', o);
+    if (mode === 'once') {
+      if (!(await ask('Cancel lesson', `Cancel ${o.s.name}'s lesson on ${fmtDate(o.date)}?`))) return;
+      o.s.slots[o.si].exceptions[o.orig] = { ...o.s.slots[o.si].exceptions[o.orig], cancel: true };
+    } else if (mode === 'all') {
+      if (!(await ask('Cancel all lessons', `Cancel all of ${o.s.name}'s lessons from ${fmtDate(o.date)} onward?`))) return;
+      endSlotsAt(o.s, o.orig);
+    } else return;
+    await save();
+    logChange(mode === 'once' ? `${o.s.name}: cancelled lesson ${o.date} at ${fmtTime(o.start)}` : `${o.s.name}: cancelled all lessons from ${o.orig} onward`);
+    renderGrid();
+  };
+}
+
+// Billing change that applies from this lesson onward; earlier lessons keep their billing.
+function changeBillingForm(o) {
+  const b = billingFor(o);
+  openSheet(`<h2>Change billing</h2><p>${esc(o.s.name)}</p>
+    <details id="dStart"><summary class="btn">Billing Start Date</summary><label><input id="bStart" type="date" value="${b.start || o.date}"></label></details>
+    <details id="dBilling"><summary class="btn">Billing Frequency</summary><label><select id="bBilling"><option value="weekly">Weekly</option><option value="monthly">Monthly (4-week rolling)</option></select></label></details>
+    <details id="dRate"><summary class="btn">Rate per lesson</summary><label><input id="bRate" type="number" inputmode="decimal" step="0.01" value="${esc(b.rate || '')}"></label></details>
+    <details id="dPayType"><summary class="btn">Payment type</summary>${paySelects('b', payFor(o))}</details>
+    <details id="dLength"><summary class="btn">Lesson length</summary><label><select id="bLength"><option value="30">30 minutes</option><option value="45">45 minutes</option><option value="60">60 minutes</option></select></label></details>
+    <label>Apply to<select id="bScope"><option value="once">This lesson only</option><option value="all" selected>All</option></select></label>
+    <div class="err" id="bErr"></div>
+    <div class="row"><button class="btn" id="bCancel">Cancel</button><button class="btn primary" id="bSave">Save</button></div>`);
+  const $ = id => document.getElementById(id);
+  wirePay('b');
+  const pay = () => ({ payType: $('bPay').value, poNumber: $('bPay').value === 'PO' ? $('bPO').value.trim() : '' });
+  $('bBilling').value = b.billing;
+  $('bLength').value = lengthFor(o);
+  $('bCancel').onclick = () => lessonTapped(o, 'dBill');
+  // Only the settings that were opened get saved.
+  const opened = id => $(id).open;
+  $('bSave').onclick = async () => {
+    // Old → new for each opened setting, for the change log.
+    const parts = [];
+    if (opened('dRate')) parts.push(`amount $${amountDue(o)} → $${$('bRate').value}`);
+    if (opened('dLength')) parts.push(`length ${lengthFor(o)} → ${$('bLength').value} min`);
+    if (opened('dPayType')) parts.push(`payment ${payText(payFor(o))} → ${payText(pay())}`);
+    if ($('bScope').value === 'once') {
+      if (opened('dRate')) (o.s.amountOverrides = o.s.amountOverrides || {})[o.orig] = $('bRate').value;
+      if (opened('dLength')) (o.s.lengthOverrides = o.s.lengthOverrides || {})[o.orig] = +$('bLength').value;
+      if (opened('dPayType')) (o.s.payOverrides = o.s.payOverrides || {})[o.orig] = pay();
+      closeSheet();
+      await save();
+      if (parts.length) logChange(`${o.s.name}: one-time change for lesson ${o.orig} — ${parts.join(', ')}`);
+      return renderGrid();
+    }
+    if (opened('dRate')) parts[0] = `rate $${b.rate} → $${$('bRate').value}`;
+    if (opened('dBilling')) parts.push(`billing ${b.billing} → ${$('bBilling').value}`);
+    if (opened('dStart')) parts.push(`billing start date ${b.start || '—'} → ${$('bStart').value}`);
+    const changes = o.s.billingChanges || [];
+    const put = c => { const old = changes.find(x => x.from === c.from); if (old) Object.assign(old, c); else changes.push(c); };
+    if (opened('dStart')) {
+      const pick = $('bStart').value;
+      const lesson = pick && occurrences(pick, pick, [o.s])[0];
+      if (!lesson) return ($('bErr').textContent = `No lesson on that date. Pick one of ${o.s.name}'s lesson days.`);
+      put({ from: lesson.orig, restart: true });
+    }
+    const change = { from: o.orig };
+    if (opened('dBilling')) change.billing = $('bBilling').value;
+    if (opened('dRate')) change.rate = $('bRate').value;
+    if (opened('dLength')) change.length = +$('bLength').value;
+    if (opened('dPayType')) Object.assign(change, pay());
+    if (Object.keys(change).length > 1) put(change);
+    closeSheet();
+    changes.sort((x, y) => (x.from < y.from ? -1 : 1));
+    o.s.billingChanges = changes;
+    await save();
+    if (parts.length) logChange(`${o.s.name}: billing change from lesson ${o.orig} onward — ${parts.join(', ')}`);
+    renderGrid();
+  };
+}
+
+// Second-level menu: resolves 'once', 'all', or null (closed).
+// List the cancelled lessons in o's series; tapping one puts it back where it was.
+function restoreForm(o) {
+  const sl = o.s.slots[o.si];
+  const list = Object.keys(sl.exceptions).filter(k => sl.exceptions[k].cancel).sort();
+  const when = k => `${fmtDate(sl.exceptions[k].date || k)} at ${fmtTime(sl.exceptions[k].start ?? sl.start)}`;
+  openSheet(`<h2>Restore cancelled lesson</h2><p>${esc(o.s.name)}</p>
+    ${list.length ? list.map((k, i) => `<button class="btn" id="r${i}">${when(k)}</button>`).join('') : '<p>No cancelled lessons.</p>'}
+    <button class="btn" id="rClose">Back</button>`);
+  document.getElementById('rClose').onclick = () => lessonTapped(o, 'dSched');
+  list.forEach((k, i) => document.getElementById('r' + i).onclick = async () => {
+    if (!(await ask('Restore lesson', `Restore ${o.s.name}'s lesson on ${when(k)}?`))) return;
+    const msg = `${o.s.name}: restored cancelled lesson ${k} (${when(k)})`;
+    if (sl.exceptions[k].date) delete sl.exceptions[k].cancel;
+    else delete sl.exceptions[k];
+    await save();
+    logChange(msg);
+    renderGrid();
+  });
+}
+
+function onceOrAll(title, o) {
+  return new Promise(resolve => {
+    openSheet(`<h2>${esc(title)}</h2><p>${esc(o.s.name)} · ${fmtDate(o.date)} at ${fmtTime(o.start)}</p>
+      <button class="btn" id="oOnce">Once</button>
+      <button class="btn" id="oAll">All</button>
+      <button class="btn" id="oClose">Back</button>`);
+    document.getElementById('oOnce').onclick = () => { closeSheet(); resolve('once'); };
+    document.getElementById('oAll').onclick = () => { closeSheet(); resolve('all'); };
+    document.getElementById('oClose').onclick = () => { lessonTapped(o, 'dSched'); resolve(null); };
+  });
+}
+
+// Stop all of a student's recurring lessons on/after cutoff.
+function endSlotsAt(s, cutoff) {
+  s.slots = s.slots.filter(sl => sl.anchor < cutoff);
+  s.slots.forEach(sl => { if (!sl.until || sl.until > cutoff) sl.until = cutoff; });
+  for (const sl of s.slots) for (const k of Object.keys(sl.exceptions)) if (k >= cutoff) delete sl.exceptions[k];
+}
+
+async function pickSlot(date, start) {
+  const { mode, occ: o } = picking;
+  if (start + lengthFor(o) > DAY_END) return ask('Too late', 'That lesson would run past 6:30 PM. Pick an earlier slot.');
+  const msg = `Move ${o.s.name} from ${fmtDate(o.date)} ${fmtTime(o.start)} to ${fmtDate(date)} ${fmtTime(start)}` + (mode === 'all' ? '…and every lesson after?' : '?');
+  if (!(await ask(mode === 'all' ? 'Reschedule all' : 'Reschedule once', msg))) return;
+
+  // Build the change on a copy so conflicts can be checked before saving.
+  const copy = JSON.parse(JSON.stringify(data.students));
+  const s = copy.find(x => x.id === o.s.id);
+  if (mode === 'once') {
+    const sl = s.slots[o.si];
+    if (date === o.orig && start === sl.start) delete sl.exceptions[o.orig];
+    else sl.exceptions[o.orig] = { date, start };
+  } else {
+    // Only this lesson's series moves; earlier lessons and other series stay put.
+    const sl = s.slots[o.si], cutoff = sunday(date < o.orig ? date : o.orig);
+    for (const k of Object.keys(sl.exceptions)) if (k >= cutoff) delete sl.exceptions[k];
+    if (sl.anchor >= cutoff) s.slots.splice(o.si, 1);
+    else if (!sl.until || sl.until > cutoff) sl.until = cutoff;
+    s.slots.push({ anchor: date, start, until: null, freq: sl.freq, exceptions: {} });
+  }
+  const conflicts = findConflicts(copy, s.id, date, mode === 'once' ? o.orig : null);
+  if (!(await conflictOk(conflicts))) return;
+  data.students = copy;
+  picking = null;
+  await save();
+  logChange(`${o.s.name}: moved lesson ${o.date} ${fmtTime(o.start)} → ${date} ${fmtTime(start)}` + (mode === 'all' ? ' and every lesson after' : ' (once)'));
+  renderGrid();
+}
+
+// ---------- swipe between weeks ----------
+let touchX = null, touchY = null;
+const schedEl = document.getElementById('schedule');
+schedEl.addEventListener('touchstart', e => { touchX = e.touches[0].clientX; touchY = e.touches[0].clientY; }, { passive: true });
+schedEl.addEventListener('touchend', e => {
+  if (touchX === null) return;
+  const dx = e.changedTouches[0].clientX - touchX, dy = e.changedTouches[0].clientY - touchY;
+  touchX = null;
+  if (Math.abs(dx) > 60 && Math.abs(dx) > Math.abs(dy) * 1.5) {
+    changeWeek(dx > 0 ? -1 : 1); // finger right = back a week
+  }
+});
+// Same swipe on the mileage page presses its ◀ / ▶ buttons.
+const mileEl = document.getElementById('mileage');
+mileEl.addEventListener('touchstart', e => { touchX = e.touches[0].clientX; touchY = e.touches[0].clientY; }, { passive: true });
+mileEl.addEventListener('touchend', e => {
+  if (touchX === null) return;
+  const dx = e.changedTouches[0].clientX - touchX, dy = e.changedTouches[0].clientY - touchY;
+  touchX = null;
+  if (Math.abs(dx) > 60 && Math.abs(dx) > Math.abs(dy) * 1.5) document.getElementById(dx > 0 ? 'mPrev' : 'mNext')?.click();
+});
+const statsEl = document.getElementById('stats');
+statsEl.addEventListener('touchstart', e => { touchX = e.touches[0].clientX; touchY = e.touches[0].clientY; }, { passive: true });
+statsEl.addEventListener('touchend', e => {
+  if (touchX === null) return;
+  const dx = e.changedTouches[0].clientX - touchX, dy = e.changedTouches[0].clientY - touchY;
+  touchX = null;
+  if (Math.abs(dx) > 60 && Math.abs(dx) > Math.abs(dy) * 1.5) document.getElementById(dx > 0 ? 'sPrev' : 'sNext').click();
+});
+
+// ---------- drag down from the top to reload ----------
+// The ↻ circle follows the finger; past 300px it spins and the app reloads onto the same page.
+let pullX = null, pullY = null;
+const pullEl = document.getElementById('pull');
+document.addEventListener('touchstart', e => {
+  const ok = window.scrollY === 0 && modal.classList.contains('hidden') && !e.target.closest('#mapEl');
+  pullX = ok ? e.touches[0].clientX : null;
+  pullY = ok ? e.touches[0].clientY : null;
+  pullEl.style.transition = 'none';
+}, { passive: true });
+// The page (header + sections) slides down with the finger too.
+const movePage = (y, t) => document.querySelectorAll('body > header, body > section').forEach(el => {
+  el.style.transition = t;
+  el.style.transform = y ? `translateY(${y}px)` : '';
+});
+const pullBack = () => { pullEl.style.transition = 'transform .5s ease-out'; pullEl.style.transform = ''; movePage(0, 'transform .5s ease-out'); };
+// Past the refresh point it asks right away, without waiting for the finger to lift.
+document.addEventListener('touchmove', e => {
+  if (pullY === null) return;
+  const dx = e.touches[0].clientX - pullX, dy = Math.max(0, e.touches[0].clientY - pullY);
+  const pulled = Math.min(dy, 450) * 0.2;
+  pullEl.style.transform = `translateY(${pulled - 60}px)`;
+  pullEl.firstChild.style.transform = `rotate(${dy * 2 / 3}deg)`;
+  movePage(pulled, 'none');
+  if (!(dy > 300 && dy > Math.abs(dx))) return;
+  pullY = null;
+  modal.classList.add('soft');
+  ask('Refresh Page?', '').then(yes => {
+    modal.classList.remove('soft');
+    if (!yes) return pullBack();
+    pullEl.style.transition = 'transform .2s';
+    pullEl.style.transform = 'translateY(16px)';
+    pullEl.classList.add('spin');
+    const page = ['schedule', 'student', 'map', 'mileage', 'stats'].find(id => !document.getElementById(id).classList.contains('hidden')) || 'home';
+    try { sessionStorage.setItem('reloadTo', JSON.stringify({ page, weekStart, mileWeek, student: document.getElementById('student').dataset.id, pulled })); } catch (err) {}
+    location.reload();
+  });
+}, { passive: true });
+document.addEventListener('touchend', () => {
+  if (pullY === null) return;
+  pullY = null;
+  pullBack();
+});
+
+// Slide the grid out, switch weeks, slide the new week in from the other side.
+let animating = false;
+function changeWeek(dir) {
+  if (animating) return;
+  animating = true;
+  const grid = document.getElementById('grid');
+  grid.style.transition = 'transform .25s ease-in, opacity .25s';
+  grid.style.transform = `translateX(${-dir * 100}%)`;
+  grid.style.opacity = '0';
+  setTimeout(() => {
+    weekStart = addDays(weekStart, 7 * dir);
+    renderGrid();
+    grid.style.transition = 'none';
+    grid.style.transform = `translateX(${dir * 100}%)`;
+    grid.offsetWidth; // apply the start position before animating back in
+    grid.style.transition = 'transform .25s ease-out, opacity .25s';
+    grid.style.transform = '';
+    grid.style.opacity = '1';
+    setTimeout(() => { animating = false; }, 250);
+  }, 250);
+}
+
+// Top button shows on the home page once scrolled down (it sits inside #home, so it hides with it).
+const topBtn = document.getElementById('topBtn');
+window.addEventListener('scroll', () => topBtn.classList.toggle('hidden', window.scrollY < 100), { passive: true });
+topBtn.onclick = () => window.scrollTo({ top: 0, behavior: 'smooth' });
+
+// ---------- wiring ----------
+document.getElementById('scheduleBtn').onclick = showSchedule;
+document.getElementById('mapBtn').onclick = showMap;
+document.getElementById('mileageBtn').onclick = showMileage;
+document.getElementById('statsBtn').onclick = () => {
+  document.getElementById('home').classList.add('hidden');
+  document.getElementById('stats').classList.remove('hidden');
+  document.getElementById('homeBtn').classList.remove('hidden');
+  document.getElementById('title').textContent = 'Stats';
+  renderStats();
+};
+document.getElementById('sPrev').onclick = () => { statsWeek = addDays(statsWeek, -7); renderStats(); };
+document.getElementById('sNext').onclick = () => { statsWeek = addDays(statsWeek, 7); renderStats(); };
+document.getElementById('sToday').onclick = () => { statsWeek = sunday(toKey(new Date())); renderStats(); };
+document.getElementById('homeBtn').onclick = showHome;
+document.getElementById('prevWeek').onclick = () => changeWeek(-1);
+document.getElementById('nextWeek').onclick = () => changeWeek(1);
+document.getElementById('bannerCancel').onclick = () => { picking = null; renderGrid(); };
+
+// After a drag-down reload, reopen the page it was on.
+load().then(() => {
+  showHome();
+  let to = null;
+  try { to = JSON.parse(sessionStorage.getItem('reloadTo')); sessionStorage.removeItem('reloadTo'); } catch (err) {}
+  if (!to) return;
+  weekStart = to.weekStart;
+  mileWeek = to.mileWeek;
+  if (to.page === 'schedule') showSchedule();
+  else if (to.page === 'map') showMap();
+  else if (to.page === 'mileage') showMileage();
+  else if (to.page === 'stats') document.getElementById('statsBtn').onclick();
+  else if (to.page === 'student') { const s = data.students.find(x => x.id === to.student); if (s) showStudent(s); }
+  // Start pulled down where Yes was tapped, then float back up.
+  if (to.pulled) {
+    movePage(to.pulled, 'none');
+    pullEl.style.transition = 'none';
+    pullEl.style.transform = 'translateY(16px)';
+    pullEl.classList.add('spin');
+    pullEl.offsetWidth; // apply the start position before floating up
+    pullBack();
+    setTimeout(() => pullEl.classList.remove('spin'), 500);
+  }
+});
+</script>
+</body>
+</html>

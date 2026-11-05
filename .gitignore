@@ -1,0 +1,5 @@
+# Your Google key and your students' data - never upload
+google-key.txt
+data.json
+route-cache.json
+changelog.txt
